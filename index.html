@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b0b10">
+  <meta name="description" content="Roll a twenty-sided die. Test your luck.">
+  <title>D20 — Test Your Luck</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b0b10;
+      --panel: rgba(22, 22, 31, .88);
+      --line: rgba(255,255,255,.11);
+      --muted: #a5a5b5;
+      --text: #f4f2f7;
+      --red: #ff4057;
+      --gold: #f4c76b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      min-height: 100vh; margin: 0; display: grid; place-items: center;
+      padding: 28px 16px; color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(ellipse at 50% 15%, rgba(125, 25, 49, .22), transparent 42%),
+        radial-gradient(ellipse at 50% 100%, rgba(80, 44, 104, .13), transparent 45%),
+        var(--bg);
+    }
+    .shell { width: min(100%, 560px); text-align: center; }
+    .eyebrow { color: var(--red); font-size: .72rem; font-weight: 800; letter-spacing: .28em; text-transform: uppercase; }
+    h1 { margin: 10px 0 7px; font-size: clamp(2.4rem, 9vw, 4.3rem); letter-spacing: -.07em; line-height: 1; }
+    .subtitle { color: var(--muted); margin: 0 auto; max-width: 34rem; line-height: 1.6; }
+    .table {
+      position: relative; margin: 32px auto 20px; padding: 28px 20px 24px;
+      border: 1px solid var(--line); border-radius: 24px;
+      background: linear-gradient(145deg, rgba(255,255,255,.055), rgba(255,255,255,.018)), var(--panel);
+      box-shadow: 0 25px 90px rgba(0,0,0,.38), inset 0 1px rgba(255,255,255,.06);
+      overflow: hidden;
+    }
+    .table::before {
+      content: ""; position: absolute; inset: 0; pointer-events: none;
+      background: linear-gradient(115deg, transparent 20%, rgba(255,255,255,.035) 48%, transparent 70%);
+    }
+    .die-stage { height: 230px; display: grid; place-items: center; perspective: 700px; }
+    .die-wrap { width: 160px; height: 160px; display: grid; place-items: center; filter: drop-shadow(0 20px 22px rgba(0,0,0,.5)); }
+    /* A stylized, faceted d20 emblem. The number is the authoritative roll result. */
+    .die {
+      width: 142px; height: 142px; position: relative; display: grid; place-items: center;
+      clip-path: polygon(50% 0%, 89% 17%, 100% 58%, 74% 96%, 26% 96%, 0% 58%, 11% 17%);
+      background: linear-gradient(145deg, #ff7180 0%, #a71935 34%, #3c101d 72%, #170e17 100%);
+      border: 0; transform: rotateX(8deg) rotateZ(-7deg);
+      transition: filter .25s ease;
+    }
+    .die::before {
+      content: ""; position: absolute; inset: 9px;
+      clip-path: polygon(50% 0%, 89% 17%, 100% 58%, 74% 96%, 26% 96%, 0% 58%, 11% 17%);
+      border: 2px solid rgba(255,224,190,.72);
+      background: linear-gradient(135deg, rgba(255,255,255,.17), transparent 48%);
+    }
+    .die::after {
+      content: ""; position: absolute; width: 1px; height: 120px;
+      background: rgba(255,220,190,.24); transform: rotate(48deg);
+      box-shadow: 24px 0 rgba(255,220,190,.13), -24px 0 rgba(255,220,190,.13);
+    }
+    .number {
+      position: relative; z-index: 1; font-size: 3.5rem; font-weight: 900;
+      letter-spacing: -.08em; text-shadow: 0 3px 12px rgba(0,0,0,.55);
+    }
+    .rolling .die-wrap { animation: tumble .9s cubic-bezier(.16,.75,.25,1); }
+    .rolling .die { filter: brightness(1.35) saturate(1.2); }
+    @keyframes tumble {
+      0% { transform: rotateX(0) rotateY(0) rotateZ(0) scale(1); }
+      35% { transform: rotateX(420deg) rotateY(260deg) rotateZ(180deg) scale(1.12); }
+      70% { transform: rotateX(760deg) rotateY(520deg) rotateZ(330deg) scale(.96); }
+      100% { transform: rotateX(1080deg) rotateY(720deg) rotateZ(540deg) scale(1); }
+    }
+    .result-label { min-height: 28px; color: var(--gold); font-weight: 800; letter-spacing: .12em; text-transform: uppercase; font-size: .82rem; }
+    .result-hint { min-height: 24px; color: var(--muted); font-size: .9rem; margin-top: 4px; }
+    button {
+      appearance: none; border: 0; cursor: pointer; color: white;
+      background: linear-gradient(135deg, #ff5369, #bd1737);
+      padding: 15px 30px; border-radius: 999px; min-width: 190px;
+      font: inherit; font-weight: 900; letter-spacing: .13em;
+      box-shadow: 0 9px 26px rgba(218, 35, 66, .25), inset 0 1px rgba(255,255,255,.25);
+      transition: transform .18s ease, filter .18s ease, box-shadow .18s ease;
+    }
+    button:hover { transform: translateY(-2px); filter: brightness(1.1); box-shadow: 0 12px 32px rgba(218,35,66,.34); }
+    button:active { transform: translateY(1px) scale(.99); }
+    button:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
+    button:disabled { cursor: wait; opacity: .75; }
+    .meta { display: flex; justify-content: center; gap: 24px; margin-top: 22px; color: var(--muted); font-size: .8rem; }
+    .meta strong { color: var(--text); font-variant-numeric: tabular-nums; }
+    .history { margin: 22px 0 0; padding: 16px 0 0; border-top: 1px solid var(--line); }
+    .history-title { color: var(--muted); font-size: .7rem; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; }
+    .rolls { display: flex; flex-wrap: wrap; justify-content: center; gap: 7px; min-height: 30px; margin-top: 12px; }
+    .chip { min-width: 31px; padding: 6px 8px; border-radius: 8px; background: rgba(255,255,255,.07); font-weight: 800; font-size: .85rem; }
+    .chip.critical { color: #16100a; background: var(--gold); }
+    .chip.fail { color: white; background: #a51d37; }
+    footer { margin-top: 22px; color: #777787; font-size: .78rem; }
+    footer a { color: #c6a2ad; text-decoration: none; }
+    footer a:hover { color: white; text-decoration: underline; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="eyebrow">A little luck never hurts</div>
+    <h1>ROLL THE D20</h1>
+    <p class="subtitle">One die. Twenty sides. No rerolls from fate.</p>
+
+    <section class="table" aria-label="Twenty-sided die roller">
+      <div class="die-stage" id="dieStage">
+        <div class="die-wrap" aria-hidden="true">
+          <div class="die"><span class="number" id="number">20</span></div>
+        </div>
+      </div>
+      <div class="result-label" id="resultLabel" aria-live="polite">Your destiny awaits</div>
+      <div class="result-hint" id="resultHint">Click below to roll</div>
+      <div style="margin-top:22px">
+        <button id="rollButton" type="button">⚄ &nbsp; ROLL D20</button>
+      </div>
+      <div class="meta">
+        <span>ROLLS <strong id="rollCount">0</strong></span>
+        <span>LAST RESULT <strong id="lastResult">—</strong></span>
+      </div>
+      <div class="history">
+        <div class="history-title">Recent rolls</div>
+        <div class="rolls" id="history"><span style="color:#777787;font-size:.82rem">No rolls yet</span></div>
+      </div>
+    </section>
+    <footer>
+      Made for fun · Fair random result using your browser's crypto API
+      <br><a href="https://github.com/Nickreven" target="_blank" rel="noopener noreferrer">by Nickreven</a>
+    </footer>
+  </main>
+
+  <script>
+    const button = document.getElementById('rollButton');
+    const stage = document.getElementById('dieStage');
+    const number = document.getElementById('number');
+    const label = document.getElementById('resultLabel');
+    const hint = document.getElementById('resultHint');
+    const countEl = document.getElementById('rollCount');
+    const lastEl = document.getElementById('lastResult');
+    const historyEl = document.getElementById('history');
+
+    let rollCount = 0;
+    let recent = [];
+    let rolling = false;
+
+    // Rejection sampling avoids modulo bias: every integer 1..20 is equally likely.
+    function rollD20() {
+      const range = 0x100000000;
+      const limit = range - (range % 20);
+      const value = new Uint32Array(1);
+      do { crypto.getRandomValues(value); } while (value[0] >= limit);
+      return (value[0] % 20) + 1;
+    }
+
+    function renderHistory() {
+      historyEl.replaceChildren();
+      if (!recent.length) {
+        const empty = document.createElement('span');
+        empty.textContent = 'No rolls yet';
+        empty.style.cssText = 'color:#777787;font-size:.82rem';
+        historyEl.append(empty);
+        return;
+      }
+      recent.forEach(result => {
+        const chip = document.createElement('span');
+        chip.className = 'chip' + (result === 20 ? ' critical' : result === 1 ? ' fail' : '');
+        chip.textContent = result;
+        chip.title = result === 20 ? 'Natural 20' : result === 1 ? 'Critical failure' : `Rolled ${result}`;
+        historyEl.append(chip);
+      });
+    }
+
+    button.addEventListener('click', () => {
+      if (rolling) return;
+      rolling = true;
+      button.disabled = true;
+      button.textContent = 'ROLLING…';
+      stage.classList.remove('rolling');
+      // Restart the CSS animation reliably.
+      void stage.offsetWidth;
+      stage.classList.add('rolling');
+
+      const result = rollD20();
+      window.setTimeout(() => {
+        number.textContent = result;
+        rollCount += 1;
+        recent.unshift(result);
+        recent = recent.slice(0, 10);
+        countEl.textContent = rollCount;
+        lastEl.textContent = result;
+        renderHistory();
+
+        if (result === 20) {
+          label.textContent = 'NATURAL 20!';
+          hint.textContent = 'Legendary. The universe is on your side.';
+        } else if (result === 1) {
+          label.textContent = 'CRITICAL FAILURE!';
+          hint.textContent = 'Oof. Even the dice have bad days.';
+        } else {
+          label.textContent = `YOU ROLLED ${result}`;
+          hint.textContent = result >= 15 ? 'A strong roll. Make it count.' : result <= 5 ? 'Not your finest hour. Try again?' : 'The adventure continues.';
+        }
+
+        stage.classList.remove('rolling');
+        button.disabled = false;
+        button.textContent = '⚄  ROLL AGAIN';
+        rolling = false;
+      }, 900);
+    });
+  </script>
+</body>
+</html>
